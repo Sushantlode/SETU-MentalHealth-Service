@@ -1,0 +1,117 @@
+const { uploadImageToS3 } = require('../services/s3.js'); // Import the S3 upload utility
+const svc = require('../services/assessment.service.js'); // Import the assessment service
+
+const ok = (res, data, extra = {}) => res.status(200).json({ success: true, ...extra, data });
+const created = (res, data) => res.status(201).json({ success: true, data });
+const err = (res, e, code = 500) => res.status(code).json({ success: false, message: e?.message || 'Error' });
+
+const create = async (req, res) => {
+  try {
+    if (req.file) {
+      const imageKey = await uploadImageToS3(req.file); // Helper function to upload image
+      req.body.imageKey = imageKey;
+    }
+
+    // Add user information from JWT token
+    const assessmentData = {
+      ...req.body,
+      createdBy: req.user.id,
+      userId: req.user.id
+    };
+
+    const a = await svc.createAssessment(assessmentData); 
+    return created(res, a); 
+  } catch (e) { return err(res, e); }
+};
+
+const list = async (_req, res) => {
+  try { 
+    const a = await svc.listAssessments(); 
+    return ok(res, a); 
+  } catch (e) { 
+    return err(res, e); 
+  }
+};
+
+const detail = async (req, res) => {
+  try {
+    const a = await svc.getAssessmentDetail(req.params.id);
+    if (!a) return err(res, new Error('Not found'), 404);
+    return ok(res, a);
+  } catch (e) { 
+    return err(res, e); 
+  }
+};
+
+const submit = async (req, res) => {
+  try {
+    console.log('Submit request body:', req.body);
+    console.log('Submit request params:', req.params);
+    
+    // Handle different data formats from frontend
+    let answers = [];
+    
+    if (req.body?.answerData && Array.isArray(req.body.answerData)) {
+      // Frontend is sending answerData as array
+      answers = req.body.answerData;
+    } else if (req.body?.answers) {
+      if (Array.isArray(req.body.answers)) {
+        // Frontend is sending answers as array
+        answers = req.body.answers;
+      } else if (typeof req.body.answers === 'object') {
+        // Frontend is sending answers as object, convert to array
+        answers = Object.values(req.body.answers);
+      }
+    }
+    
+    console.log('Final answers:', answers);
+    console.log('Answers type:', typeof answers);
+    console.log('Is answers array:', Array.isArray(answers));
+    
+    const out = await svc.submitAnswers(req.params.id, answers);
+    return ok(res, out);
+  } catch (e) { 
+    console.error('Submit error:', e);
+    return err(res, e); 
+  }
+};
+
+const update = async (req, res) => {
+  try {
+    if (req.file) {
+      const imageKey = await uploadImageToS3(req.file); // Helper function to upload image
+      req.body.imageKey = imageKey;
+    }
+
+    const updateData = {
+      ...req.body,
+      updatedBy: req.user.id
+    };
+    const a = await svc.updateAssessment(req.params.id, updateData);
+    return ok(res, a);
+  } catch (e) {
+    if (e.message === 'Assessment not found') return err(res, e, 404);
+    return err(res, e);
+  }
+};
+
+const deleteAssessment = async (req, res) => {
+  try {
+    const force = String(req.query.force).toLowerCase() === 'true';
+    const result = await svc.deleteAssessment(req.params.id, { force });
+    return ok(res, result);
+  } catch (e) {
+    if (e.message === 'Assessment not found') return err(res, e, 404);
+    if (e.message === 'Cannot delete assessment with existing submissions') return err(res, e, 400);
+    return err(res, e);
+  }
+};
+
+module.exports = {
+  create,
+  list,
+  detail,
+  submit,
+  update,
+  deleteAssessment
+};
