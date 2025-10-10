@@ -103,7 +103,7 @@ const getAssessmentDetail = async (id) => {
 };
 
 // Function to submit answers for an assessment
-const submitAnswers = async (assessmentId, answers = []) => {
+const submitAnswers = async (assessmentId, answers = [], userId = null) => {
   console.log('submitAnswers called with:', { assessmentId, answers, answersType: typeof answers, isArray: Array.isArray(answers) });
   
   if (!Array.isArray(answers)) {
@@ -144,7 +144,7 @@ const submitAnswers = async (assessmentId, answers = []) => {
 
   const submission = await sequelize.transaction(async (t) => {
     const sub = await Submission.create(
-      { assessmentId, totalScore: total, bandLabel: band.label, bandColor: band.color },
+      { assessmentId, userId, totalScore: total, bandLabel: band.label, bandColor: band.color },
       { transaction: t }
     );
 
@@ -155,10 +155,35 @@ const submitAnswers = async (assessmentId, answers = []) => {
   });
 
   return {
-    submissionId: submission.id,
     totalScore: total,
     band: { label: band.label, color: band.color, recommendation: band.recommendation }
   };
+};
+
+// List submissions for a user across all assessments
+const getSubmissionsByUser = async (userId, requestingUser = null, includeLegacy = false) => {
+  // Enforce access: non-admin can only see their own
+  if (requestingUser && requestingUser.role !== 'admin' && requestingUser.id !== userId) {
+    throw new Error('Forbidden');
+  }
+
+  let where = {};
+  if (userId) {
+    where.userId = userId;
+  } else if (includeLegacy && requestingUser && requestingUser.role === 'admin') {
+    where.userId = null;  // Legacy submissions only for admin
+  } else {
+    // Default to current user if no userId provided
+    where.userId = requestingUser ? requestingUser.id : null;
+  }
+
+  const submissions = await Submission.findAll({
+    where,
+    order: [['createdAt', 'DESC']],
+    attributes: ['id', 'assessmentId', 'userId', 'totalScore', 'bandLabel', 'bandColor', 'createdAt'],
+    include: [{ model: Assessment, as: 'assessment', attributes: ['id', 'title'] }]
+  });
+  return submissions;
 };
 
 // Function to update an existing assessment
@@ -283,6 +308,7 @@ module.exports = {
   listAssessments,
   getAssessmentDetail,
   submitAnswers,
+  getSubmissionsByUser,
   updateAssessment,
   deleteAssessment
 };

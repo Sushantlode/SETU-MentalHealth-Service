@@ -17,4 +17,12 @@ r.put('/:id', validateUser, uploadImage, validatePartialAssessmentInput, ctl.upd
 r.delete('/:id', validateUser, ctl.deleteAssessment);
 r.post('/:id/submit', validateUser, ctl.submit);
 
-module.exports = r;
+// Submissions retrieval
+// GET /api/v1/submissions?userId={userId}
+r.get('/submissions', validateUser, ctl.getUserSubmissions);
+
+// Separate router for submissions at /api/v1/submissions
+const submissionRouter = Router();
+submissionRouter.get('/', validateUser, ctl.getUserSubmissions);
+
+module.exports = { assessmentRoutes: r, submissionRoutes: submissionRouter };
