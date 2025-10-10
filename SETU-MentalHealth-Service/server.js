@@ -9,7 +9,7 @@ const sequelize = require('./config/db');
 
 const bookingRoutes = require('./routes/bookingRoutes');
 const timeSlotRoutes = require('./routes/timeSlotRoutes');
-const assessmentRoutes = require('./routes/assessment.routes');
+const { assessmentRoutes, submissionRoutes } = require('./routes/assessment.routes');
 const protectedRoutes = require('./routes/protected.routes');
 const authRoutes = require('./routes/auth.routes');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -48,6 +48,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/time-slots', timeSlotRoutes);
 app.use('/api/v1/assessments', assessmentRoutes);
+app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/protected', protectedRoutes);
 app.use('/api/bookings', bookingRoutesWithAuth);
 

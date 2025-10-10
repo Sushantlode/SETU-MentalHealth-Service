@@ -68,7 +68,7 @@ const submit = async (req, res) => {
     console.log('Answers type:', typeof answers);
     console.log('Is answers array:', Array.isArray(answers));
     
-    const out = await svc.submitAnswers(req.params.id, answers);
+    const out = await svc.submitAnswers(req.params.id, answers, req.user.id);
     return ok(res, out);
   } catch (e) { 
     console.error('Submit error:', e);
@@ -107,11 +107,25 @@ const deleteAssessment = async (req, res) => {
   }
 };
 
+const getUserSubmissions = async (req, res) => {
+  try {
+    // Get userId from query params, params, or current user
+    const userId = req.query.userId || req.params.userId || req.user.id;
+
+    const submissions = await svc.getSubmissionsByUser(userId, req.user);
+    return ok(res, submissions);
+  } catch (e) {
+    if (e.message === 'Forbidden') return err(res, e, 403);
+    return err(res, e);
+  }
+};
+
 module.exports = {
   create,
   list,
   detail,
   submit,
   update,
-  deleteAssessment
+  deleteAssessment,
+  getUserSubmissions
 };
