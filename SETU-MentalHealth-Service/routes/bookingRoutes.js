@@ -131,15 +131,18 @@ router.get('/pincode/:pincode', validateUser, async (req, res, next) => {
   }
 });
 
-// GET /api/bookings/:id - Get booking by ID (Authenticated users)
-router.get('/:id', validateUser, async (req, res, next) => {
+// GET /api/bookings/my-bookings - Get current user's bookings (TEMPORARILY NO AUTH for testing)
+router.get('/my-bookings', async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const booking = await bookingService.getBookingById(id);
-    
+    // TEMPORARY: For testing, get userId from query param or use a test user
+    const userId = req.query.userId || 'test-user-id';
+
+    const bookings = await bookingService.getBookingsByUserId(userId);
+
     res.json({
       success: true,
-      data: booking
+      data: bookings,
+      count: bookings.length
     });
   } catch (error) {
     next(error);

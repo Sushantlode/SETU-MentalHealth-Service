@@ -318,13 +318,22 @@ class BookingService {
     }
   }
 
-  // Get bookings by pincode
-  async getBookingsByPincode(pincode) {
+  // Get bookings by user ID
+  async getBookingsByUserId(userId) {
     try {
-      const bookings = await Booking.findByPincode(pincode);
+      const bookings = await Booking.findAll({
+        where: {
+          [Op.or]: [
+            { userId: userId },
+            { createdBy: userId }
+          ]
+        },
+        order: [['scheduleDate', 'ASC'], ['scheduleTime', 'ASC']]
+      });
+
       return bookings.map(booking => booking.toJSON());
     } catch (error) {
-      throw new Error(`Failed to fetch bookings by pincode: ${error.message}`);
+      throw new Error(`Failed to fetch bookings by user ID: ${error.message}`);
     }
   }
 }

@@ -182,6 +182,36 @@ module.exports = (sequelize, Sequelize) => {
           msg: 'Status must be one of: pending, confirmed, cancelled, completed'
         }
       }
+    },
+    userId: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      validate: {
+        len: {
+          args: [0, 255],
+          msg: 'User ID cannot exceed 255 characters'
+        }
+      }
+    },
+    createdBy: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      validate: {
+        len: {
+          args: [0, 255],
+          msg: 'Created by cannot exceed 255 characters'
+        }
+      }
+    },
+    updatedBy: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      validate: {
+        len: {
+          args: [0, 255],
+          msg: 'Updated by cannot exceed 255 characters'
+        }
+      }
     }
   }, {
     tableName: 'QuantificationDeviceBooking',
