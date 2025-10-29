@@ -161,15 +161,25 @@ const submitAnswers = async (assessmentId, answers = [], userId = null) => {
 };
 
 // List submissions for a user across all assessments
+const normalizeUserId = (value) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return String(value);
+};
+
 const getSubmissionsByUser = async (userId, requestingUser = null, includeLegacy = false) => {
+  const normalizedUserId = normalizeUserId(userId);
+  const normalizedRequesterId = normalizeUserId(requestingUser?.id ?? requestingUser?.user_id ?? requestingUser?.userId);
+
   // Enforce access: non-admin can only see their own
-  if (requestingUser && requestingUser.role !== 'admin' && requestingUser.id !== userId) {
+  if (requestingUser && requestingUser.role !== 'admin' && normalizedRequesterId !== normalizedUserId) {
     throw new Error('Forbidden');
   }
 
   let where = {};
-  if (userId) {
-    where.userId = userId;
+  if (normalizedUserId) {
+    where.userId = normalizedUserId;
   } else if (includeLegacy && requestingUser && requestingUser.role === 'admin') {
     where.userId = null;  // Legacy submissions only for admin
   } else {

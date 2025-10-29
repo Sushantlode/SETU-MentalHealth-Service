@@ -6,15 +6,26 @@ const validateUser = async (req, res, next) => {
         const token = req.headers.authorization?.split(' ')[1];
         const refreshToken = req.headers['x-refresh-token'];
 
+        console.log('JWT Validation Debug:', {
+            hasAuthHeader: !!req.headers.authorization,
+            tokenPresent: !!token,
+            tokenStart: token ? token.substring(0, 20) + '...' : 'none',
+            jwtSecret: process.env.JWT_SECRET ? 'SET' : 'NOT SET'
+        });
+
         if (!token) {
             return res.status(401).json({ message: 'Access token is required' });
         }
 
         try {
-            
             const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+            console.log('JWT Decoded successfully:', {
+                userId: decodedToken.id,
+                email: decodedToken.email,
+                fullDecoded: decodedToken
+            });
             req.user = decodedToken;
-            return next(); // ✅ Access token valid → Proceed
+            return next(); // Access token valid → Proceed
         } catch (err) {
             if (err.name === 'TokenExpiredError') {
                 console.log('Access token expired. Trying to refresh...');

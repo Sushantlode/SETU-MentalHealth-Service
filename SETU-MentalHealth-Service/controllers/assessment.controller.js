@@ -5,6 +5,17 @@ const ok = (res, data, extra = {}) => res.status(200).json({ success: true, ...e
 const created = (res, data) => res.status(201).json({ success: true, data });
 const err = (res, e, code = 500) => res.status(code).json({ success: false, message: e?.message || 'Error' });
 
+const toPlain = (value) => (value && typeof value.toJSON === 'function' ? value.toJSON() : value);
+const normalizeUserMeta = (tokenUser = {}, fallbackId = null) => {
+  const id = tokenUser.id ?? tokenUser.user_id ?? tokenUser.userId ?? fallbackId ?? null;
+  return {
+    id,
+    username: tokenUser.username ?? tokenUser.name ?? null,
+    email: tokenUser.email ?? null,
+    role: tokenUser.role ?? null
+  };
+};
+
 const create = async (req, res) => {
   try {
     if (req.file) {
@@ -113,7 +124,9 @@ const getUserSubmissions = async (req, res) => {
     const userId = req.query.userId || req.params.userId || req.user.id;
 
     const submissions = await svc.getSubmissionsByUser(userId, req.user);
-    return ok(res, submissions);
+    const userMeta = normalizeUserMeta(req.user, userId);
+    const submissionsWithUser = submissions.map((item) => ({ ...toPlain(item), user: userMeta }));
+    return ok(res, submissionsWithUser, { count: submissionsWithUser.length, user: userMeta });
   } catch (e) {
     if (e.message === 'Forbidden') return err(res, e, 403);
     return err(res, e);

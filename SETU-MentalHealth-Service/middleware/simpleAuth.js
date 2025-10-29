@@ -13,7 +13,13 @@ const validateUser = async (req, res, next) => {
 
         try {
             const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = decodedToken;
+            const normalizedId = decodedToken.id ?? decodedToken.user_id ?? decodedToken.userId ?? null;
+            req.user = {
+                ...decodedToken,
+                id: normalizedId,
+                user_id: normalizedId ?? decodedToken.user_id,
+                userId: normalizedId ?? decodedToken.userId
+            };
             return next();
         } catch (err) {
             if (err.name === 'TokenExpiredError') {

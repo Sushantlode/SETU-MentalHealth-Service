@@ -151,7 +151,12 @@ router.get('/my-bookings', async (req, res, next) => {
 
 // POST /api/bookings - Create a new booking (Authenticated users)
 router.post('/', validateUser, validateBookingInput, async (req, res, next) => {
+  console.log('POST /api/bookings route called');
+  console.log('Headers:', req.headers.authorization);
+  console.log('User object:', req.user);
   try {
+    const userIdFromToken = req.user?.id ?? req.user?.user_id ?? req.user?.userId ?? null;
+
     const bookingData = {
       fullName: req.body.fullName,
       age: parseInt(req.body.age),
@@ -167,8 +172,8 @@ router.post('/', validateUser, validateBookingInput, async (req, res, next) => {
       scheduleDate: req.body.scheduleDate,
       scheduleTime: req.body.scheduleTime,
       // Add user information from JWT token
-      userId: req.user.id,
-      createdBy: req.user.id
+      userId: userIdFromToken,
+      createdBy: userIdFromToken
     };
 
     const booking = await bookingService.createBooking(bookingData);
