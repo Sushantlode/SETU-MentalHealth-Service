@@ -5,7 +5,12 @@ module.exports = (sequelize, DataTypes) => {
     userId: { type: DataTypes.STRING, allowNull: true }, // userId (optional) if you add auth later
     totalScore: { type: DataTypes.INTEGER, allowNull: false },
     bandLabel: { type: DataTypes.STRING(100), allowNull: false },
-    bandColor: { type: DataTypes.ENUM('green','blue','orange','red'), allowNull: false }
+    bandColor: { type: DataTypes.ENUM('green','blue','orange','red'), allowNull: false },
+    subjectType: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'self' },
+    subjectName: { type: DataTypes.STRING(200), allowNull: true },
+    subjectRelation: { type: DataTypes.STRING(100), allowNull: true },
+    subjectAgeRange: { type: DataTypes.STRING(50), allowNull: true },
+    subjectMeta: { type: DataTypes.JSONB, allowNull: true }
   }, { indexes: [{ fields: ['assessmentId'] }, { fields: ['userId'] }] });
 
  

@@ -103,13 +103,21 @@ const getAssessmentDetail = async (id) => {
 };
 
 // Function to submit answers for an assessment
-const submitAnswers = async (assessmentId, answers = [], userId = null) => {
+const submitAnswers = async (assessmentId, answers = [], userId = null, subject = {}) => {
   console.log('submitAnswers called with:', { assessmentId, answers, answersType: typeof answers, isArray: Array.isArray(answers) });
-  
+
   if (!Array.isArray(answers)) {
     throw new Error(`Expected answers to be an array, but received ${typeof answers}. Received: ${JSON.stringify(answers)}`);
   }
-  
+
+  const normalizedSubject = {
+    subjectType: subject?.type ?? 'self',
+    subjectName: subject?.name ?? null,
+    subjectRelation: subject?.relation ?? null,
+    subjectAgeRange: subject?.ageRange ?? null,
+    subjectMeta: subject ?? null,
+  };
+
   const detail = await getAssessmentDetail(assessmentId);
   if (!detail) throw new Error('Assessment not found');
 
@@ -144,7 +152,14 @@ const submitAnswers = async (assessmentId, answers = [], userId = null) => {
 
   const submission = await sequelize.transaction(async (t) => {
     const sub = await Submission.create(
-      { assessmentId, userId, totalScore: total, bandLabel: band.label, bandColor: band.color },
+      {
+        assessmentId,
+        userId,
+        totalScore: total,
+        bandLabel: band.label,
+        bandColor: band.color,
+        ...normalizedSubject,
+      },
       { transaction: t }
     );
 
@@ -156,7 +171,14 @@ const submitAnswers = async (assessmentId, answers = [], userId = null) => {
 
   return {
     totalScore: total,
-    band: { label: band.label, color: band.color, recommendation: band.recommendation }
+    band: { label: band.label, color: band.color, recommendation: band.recommendation },
+    subject: {
+      type: normalizedSubject.subjectType,
+      name: normalizedSubject.subjectName,
+      relation: normalizedSubject.subjectRelation,
+      ageRange: normalizedSubject.subjectAgeRange,
+      meta: normalizedSubject.subjectMeta,
+    },
   };
 };
 
@@ -190,7 +212,20 @@ const getSubmissionsByUser = async (userId, requestingUser = null, includeLegacy
   const submissions = await Submission.findAll({
     where,
     order: [['createdAt', 'DESC']],
-    attributes: ['id', 'assessmentId', 'userId', 'totalScore', 'bandLabel', 'bandColor', 'createdAt'],
+    attributes: [
+      'id',
+      'assessmentId',
+      'userId',
+      'totalScore',
+      'bandLabel',
+      'bandColor',
+      'subjectType',
+      'subjectName',
+      'subjectRelation',
+      'subjectAgeRange',
+      'subjectMeta',
+      'createdAt'
+    ],
     include: [{ model: Assessment, as: 'assessment', attributes: ['id', 'title'] }]
   });
   return submissions;

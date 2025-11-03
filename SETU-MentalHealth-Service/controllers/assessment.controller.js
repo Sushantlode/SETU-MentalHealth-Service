@@ -79,7 +79,7 @@ const submit = async (req, res) => {
     console.log('Answers type:', typeof answers);
     console.log('Is answers array:', Array.isArray(answers));
     
-    const out = await svc.submitAnswers(req.params.id, answers, req.user.id);
+    const out = await svc.submitAnswers(req.params.id, answers, req.user.id, req.body?.subject);
     return ok(res, out);
   } catch (e) { 
     console.error('Submit error:', e);

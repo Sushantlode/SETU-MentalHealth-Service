@@ -296,4 +296,182 @@ router.delete('/:id', validateUser, async (req, res, next) => {
   }
 });
 
+// PATCH /api/bookings/:id/cancel - Cancel own upcoming booking (Authenticated users)
+router.patch('/:id/cancel', validateUser, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let booking;
+
+    try {
+      booking = await bookingService.getBookingById(id);
+    } catch (error) {
+      const message = error.message || '';
+      if (message.includes('Booking not found')) {
+        return res.status(404).json({
+          success: false,
+          message: 'Booking not found'
+        });
+      }
+      throw error;
+    }
+
+    const requesterIds = [
+      req.user?.id,
+      req.user?.user_id,
+      req.user?.userId,
+      req.user?.sub
+    ]
+      .filter((value) => value !== undefined && value !== null)
+      .map((value) => String(value).trim());
+
+    if (requesterIds.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unable to determine current user identifier.'
+      });
+    }
+
+    const bookingOwnerIds = [
+      booking.userId,
+      booking.user_id,
+      booking.userId,
+      booking.createdBy,
+      booking.created_by
+    ]
+      .filter((value) => value !== undefined && value !== null)
+      .map((value) => String(value).trim());
+
+    const ownsBooking =
+      bookingOwnerIds.length > 0 &&
+      requesterIds.some((reqId) =>
+        bookingOwnerIds.some((ownerId) => ownerId === reqId)
+      );
+
+    if (!ownsBooking) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only cancel your own bookings.'
+      });
+    }
+
+    const bookingDateTime = new Date(`${booking.scheduleDate}T${booking.scheduleTime}`);
+    if (Number.isNaN(bookingDateTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to determine booking schedule time.'
+      });
+    }
+
+    if (bookingDateTime <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only upcoming bookings can be cancelled.'
+      });
+    }
+
+    if (String(booking.status || '').toLowerCase() === 'cancelled') {
+      return res.json({
+        success: true,
+        message: 'Booking already cancelled.',
+        data: booking
+      });
+    }
+
+    const updatedBooking = await bookingService.updateBooking(id, {
+      status: 'cancelled',
+      updatedBy: req.user.id
+    });
+
+    res.json({
+      success: true,
+      message: 'Booking cancelled successfully',
+      data: updatedBooking
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/bookings/:id/self - Delete own past booking (Authenticated users)
+router.delete('/:id/self', validateUser, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let booking;
+
+    try {
+      booking = await bookingService.getBookingById(id);
+    } catch (error) {
+      const message = error.message || '';
+      if (message.includes('Booking not found')) {
+        return res.status(404).json({
+          success: false,
+          message: 'Booking not found'
+        });
+      }
+      throw error;
+    }
+
+    const requesterIds = [
+      req.user?.id,
+      req.user?.user_id,
+      req.user?.userId,
+      req.user?.sub
+    ].filter(value => value !== undefined && value !== null)
+     .map(value => String(value).trim());
+
+    if (requesterIds.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unable to determine current user identifier.'
+      });
+    }
+
+    const bookingOwnerIds = [
+      booking.userId,
+      booking.user_id,
+      booking.userId,
+      booking.createdBy,
+      booking.created_by
+    ].filter(value => value !== undefined && value !== null)
+     .map(value => String(value).trim());
+
+    const ownsBooking = bookingOwnerIds.length > 0 && requesterIds.some(reqId =>
+      bookingOwnerIds.some(ownerId => ownerId === reqId)
+    );
+
+    if (!ownsBooking) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete your own bookings.'
+      });
+    }
+
+    const bookingDateTime = new Date(`${booking.scheduleDate}T${booking.scheduleTime}`);
+    if (Number.isNaN(bookingDateTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to determine booking schedule time.'
+      });
+    }
+
+    const isCancelled = String(booking.status || '').toLowerCase() === 'cancelled';
+
+    if (!isCancelled && bookingDateTime > new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only past bookings can be deleted.'
+      });
+    }
+
+    const result = await bookingService.deleteBooking(id);
+
+    res.json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
